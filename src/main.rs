@@ -1,5 +1,3 @@
-// Adapted from the Pixels example with Conway's Game of Life
-
 #![deny(clippy::all)]
 #![forbid(unsafe_code)]
 
@@ -17,10 +15,17 @@ const SCREEN_HEIGHT: u32 = 240;
 // We are going to create a very simple sandpile dynamical system
 // https://en.wikipedia.org/wiki/Abelian_sandpile_model
 
-// This isn't really changeable but is lets us avoid a magic number
+// height at which a pile topples, not really changeable
 const TOPPLE_HEIGHT: u32 = 4;
-const RANDOM_FILL: f32 = 0.95; // proportion of cells left empty when randomly filling
-const CENTER_HEIGHT: u32 = 65536; // how many grains the huge center pile gets
+
+// proportion of cells to fill when randomizing
+const RANDOM_FILL: f32 = 0.05; 
+
+// how many grains the huge center pile gets
+const CENTER_HEIGHT: u32 = 65536;
+
+// how many grains a clicked pixel is set to
+const CLICK_HEIGHT: u32 = 256;
 
 
 
@@ -29,11 +34,11 @@ fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
-        create_window("Sandpile System", &event_loop);
+        create_window("Sandpile", &event_loop);
 
     let surface_texture = SurfaceTexture::new(p_width, p_height, &window);
 
-    let mut piles = SandPiles::new_random(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize);
+    let mut piles = SandPiles::new_center(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize);
     let mut pixels = Pixels::new(SCREEN_WIDTH, SCREEN_HEIGHT, surface_texture)?;
     let mut paused = false;
 
@@ -146,7 +151,7 @@ fn main() -> Result<(), Error> {
 }
 
 
-// COPYPASTE: ideally this could be shared.
+// This function copied entirely from the Pixels example for Conway's Game of Life
 
 /// Create a window for the game.
 ///
@@ -206,24 +211,24 @@ fn create_window(
 
 #[derive(Clone, Copy, Debug, Default)]
 struct Pile {
-    height: u32,
+    grains: u32,
 }
 
 impl Pile {
-    fn new(height: u32) -> Self {
-        Self { height }
+    fn new(grains: u32) -> Self {
+        Self { grains }
     }
 
     #[must_use]
     fn next_state(mut self) -> Self {
-        if self.height >= TOPPLE_HEIGHT {
-            self.height -= TOPPLE_HEIGHT;
+        if self.grains >= TOPPLE_HEIGHT {
+            self.grains -= TOPPLE_HEIGHT;
         }
         self
     }
 
     fn give_grain(&self) -> u32 {
-        if self.height >= TOPPLE_HEIGHT {
+        if self.grains >= TOPPLE_HEIGHT {
             1
         } else {
             0
@@ -231,11 +236,11 @@ impl Pile {
     }
 
     fn add_grains(&self, grains: u32) -> Self {
-        Pile::new(self.height.saturating_add(grains))
+        Pile::new(self.grains.saturating_add(grains))
     }
 
     fn set_grains_inplace(&mut self, grains: u32) {
-        self.height = grains
+        self.grains = grains
     }
 
 }
@@ -262,7 +267,7 @@ fn pixel_color(height: u32) -> [u8; 4] {
     } else if height == TOPPLE_HEIGHT {
         [0, 0xdd, 0xdd, 0xff]
     } else {
-        [(height as u8)*63, 0, (height as u8)*63, 0xff]
+        [(height as u8)*50, 0, (height as u8)*80, 0xff]
     }
 }
 
@@ -286,26 +291,26 @@ impl SandPiles {
         }
     }
 
-    fn new_random(width: usize, height: usize) -> Self {
+    fn new_center(width: usize, height: usize) -> Self {
         let mut result = Self::new_empty(width, height);
-        result.randomize();
+        result.center_pile();
         result
-    }
-
-    fn randomize(&mut self) {
-        let mut rng: randomize::PCG32 = generate_seed().into();
-        for c in self.piles.iter_mut() {
-            let alive = randomize::f32_half_open_right(rng.next_u32()) > RANDOM_FILL;
-            if alive {
-                let grains = rng.next_u32() % 64;
-                *c = Pile::new(grains);
-            }
-        }
     }
 
     fn center_pile(&mut self) {
         let pos = self.grid_idx(SCREEN_WIDTH/2, SCREEN_HEIGHT/2).unwrap();
         self.piles[pos].set_grains_inplace(CENTER_HEIGHT);
+    }
+
+    fn randomize(&mut self) {
+        let mut rng: randomize::PCG32 = generate_seed().into();
+        for c in self.piles.iter_mut() {
+            let alive = randomize::f32_half_open_right(rng.next_u32()) < RANDOM_FILL;
+            if alive {
+                let grains = rng.next_u32() % 64;
+                *c = Pile::new(grains);
+            }
+        }
     }
 
     fn clear(&mut self) {
@@ -342,7 +347,7 @@ impl SandPiles {
                 let neibs = self.count_tall_neibs(x, y);
                 let idx = x + y * self.width;
                 let next = self.piles[idx].next_state().add_grains(neibs);
-                // Write into scratch_piles, since we're still reading from `self.piles`
+                // Write into `self.scratch_piles`, since we're still reading from `self.piles`
                 self.scratch_piles[idx] = next;
             }
         }
@@ -354,14 +359,14 @@ impl SandPiles {
     fn draw(&self, screen: &mut [u8]) {
         debug_assert_eq!(screen.len(), 4 * self.piles.len());
         for (c, pix) in self.piles.iter().zip(screen.chunks_exact_mut(4)) {
-            let color = pixel_color(c.height);
+            let color = pixel_color(c.grains);
             pix.copy_from_slice(&color);
         }
     }
 
     fn set_pile(&mut self, x: isize, y: isize) -> bool {
         if let Some(i) = self.grid_idx(x, y) {
-            self.piles[i].set_grains_inplace(256);
+            self.piles[i].set_grains_inplace(CLICK_HEIGHT);
         }
         true
     }
@@ -374,7 +379,7 @@ impl SandPiles {
         let y0 = y0.max(0).min(self.height as isize);
         for (x, y) in line_drawing::Bresenham::new((x0, y0), (x1, y1)) {
             if let Some(i) = self.grid_idx(x, y) {
-                self.piles[i].set_grains_inplace(256);
+                self.piles[i].set_grains_inplace(CLICK_HEIGHT);
             } else {
                 break;
             }
