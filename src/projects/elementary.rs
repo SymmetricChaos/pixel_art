@@ -63,8 +63,12 @@ pub fn run_elementary() -> Result<(), Error> {
                 automata.randomize();
             }
             if input.key_pressed(VirtualKeyCode::C) {
-                // Reset and randomize
                 automata.clear();
+                paused = true;
+            }
+            if input.key_pressed(VirtualKeyCode::C) {
+                automata.active_line = 0;
+                paused = true;
             }
             // Handle mouse. This is a bit involved since support some simple
             // line drawing (mostly because it makes nice looking patterns).
@@ -209,16 +213,14 @@ const INITIAL_FILL: f32 = 0.5;
 
 #[derive(Clone, Copy, Debug, Default)]
 struct Cell {
-    alive: bool,
-    trace: bool,
+    alive: bool
 }
 
 impl Cell {
     fn new(alive: bool) -> Self {
-        Self { alive, trace: false }
+        Self { alive }
     }
 
-    #[must_use]
     fn next_state(self, neibs: (bool,bool,bool)) -> Self {
         let alive = match neibs {
             (true, true, true)    => false,
@@ -256,6 +258,7 @@ struct Rule110 {
     // `cells` and write to `scratch_cells`, then swap. Otherwise it's not in
     // use, and `cells` should be updated directly.
     scratch_cells: Vec<Cell>,
+    active_line: usize,
 }
 
 impl Rule110 {
@@ -267,6 +270,7 @@ impl Rule110 {
             scratch_cells: vec![Cell::default(); size],
             width,
             height,
+            active_line: 1,
         }
     }
 
@@ -309,20 +313,32 @@ impl Rule110 {
     }
 
     fn update(&mut self) {
-        for y in 0..self.height {
+        let y = self.active_line;
+
+        if y == 0 {
+            // Do nothing
+        } else {
             for x in 0..self.width {
                 let neibs = self.neibs(x, y);
                 let idx = x + y * self.width;
                 let next = self.cells[idx].next_state(neibs);
-                // Write into scratch_cells, since we're still reading from `self.cells`
+                // Write into `self.scratch_cells`, since we're still reading from `self.cells`
                 self.scratch_cells[idx] = next;
             }
+            self.active_line += 1;
+            if self.active_line >= self.height {
+                self.active_line = 0
+            }
+            std::mem::swap(&mut self.scratch_cells, &mut self.cells);
         }
-        std::mem::swap(&mut self.scratch_cells, &mut self.cells);
     }
 
     fn clear(&mut self) {
+        self.active_line = 1;
         for c in self.cells.iter_mut() {
+            *c = Cell::default();
+        }
+        for c in self.scratch_cells.iter_mut() {
             *c = Cell::default();
         }
     }
