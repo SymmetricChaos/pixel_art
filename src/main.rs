@@ -6,6 +6,7 @@ mod projects;
 fn select_animation(input: &str) -> Result<(),Error> {
     match input {
         "1" => projects::sandpiles::run_piles(),
+        "2" => projects::elementary::run_elementary(),
         _ => {
             println!("unknown project");
             Ok(())
@@ -16,7 +17,7 @@ fn select_animation(input: &str) -> Result<(),Error> {
 fn main() -> Result<(),Error> {
     println!("\nWelcome to my pixel animation project!");
     loop {
-        println!("\n\nWhat would you like to see?\n\n1) Sandpiles\n");
+        println!("\n\nWhat would you like to see?\n\n1) Sandpiles\n2) Rule 110");
         let mut val = String::new();
         io::stdin().read_line(&mut val).expect("Failed to read line");
 
