@@ -52,23 +52,29 @@ pub fn run_elementary() -> Result<(), Error> {
             }
             if input.key_pressed(VirtualKeyCode::P) {
                 paused = !paused;
+                match paused {
+                    true => println!("paused"),
+                    false => println!("unpaused"),
+                }
             }
             if input.key_pressed(VirtualKeyCode::Space) {
                 // Space is frame-step, so ensure we're paused
+                println!("frame advanced");
                 paused = true;
             }
             if input.key_pressed(VirtualKeyCode::R) {
-                // Reset and randomize
+                println!("reset with random coditions");
                 automata.clear();
                 automata.randomize();
             }
             if input.key_pressed(VirtualKeyCode::C) {
+                println!("screen cleared and active line reset");
                 automata.clear();
-                paused = true;
+                automata.active_line = 1;
             }
-            if input.key_pressed(VirtualKeyCode::C) {
-                automata.active_line = 0;
-                paused = true;
+            if input.key_pressed(VirtualKeyCode::N) {
+                println!("active line reset");
+                automata.active_line = 1;
             }
             // Handle mouse. This is a bit involved since support some simple
             // line drawing (mostly because it makes nice looking patterns).
@@ -254,10 +260,6 @@ struct Rule110 {
     cells: Vec<Cell>,
     width: usize,
     height: usize,
-    // Should always be the same size as `cells`. When updating, we read from
-    // `cells` and write to `scratch_cells`, then swap. Otherwise it's not in
-    // use, and `cells` should be updated directly.
-    scratch_cells: Vec<Cell>,
     active_line: usize,
 }
 
@@ -267,7 +269,6 @@ impl Rule110 {
         let size = width.checked_mul(height).expect("too big");
         Self {
             cells: vec![Cell::default(); size],
-            scratch_cells: vec![Cell::default(); size],
             width,
             height,
             active_line: 1,
@@ -323,22 +324,19 @@ impl Rule110 {
                 let idx = x + y * self.width;
                 let next = self.cells[idx].next_state(neibs);
                 // Write into `self.scratch_cells`, since we're still reading from `self.cells`
-                self.scratch_cells[idx] = next;
+                self.cells[idx] = next;
             }
             self.active_line += 1;
             if self.active_line >= self.height {
                 self.active_line = 0
             }
-            std::mem::swap(&mut self.scratch_cells, &mut self.cells);
+            //std::mem::swap(&mut self.scratch_cells, &mut self.cells);
         }
     }
 
     fn clear(&mut self) {
         self.active_line = 1;
         for c in self.cells.iter_mut() {
-            *c = Cell::default();
-        }
-        for c in self.scratch_cells.iter_mut() {
             *c = Cell::default();
         }
     }
