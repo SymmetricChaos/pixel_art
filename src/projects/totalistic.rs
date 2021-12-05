@@ -1,3 +1,5 @@
+//https://github.com/parasyte/pixels/tree/c2454b01abc11c007d4b9de8525195af942fef0d/examples/conway
+
 #![deny(clippy::all)]
 #![forbid(unsafe_code)]
 
@@ -8,46 +10,45 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 
-// Small window dimensions that should scale nicely on a 1080p or 4K screen
 const SCREEN_WIDTH: u32 = 360;
 const SCREEN_HEIGHT: u32 = 240;
 
-// We are going to create a very simple sandpile dynamical system
-// https://en.wikipedia.org/wiki/Abelian_sandpile_model
+// Nine-square binary totalistic rule using Wolfram's method
+// for n < 512
+fn code_to_rule(mut n: u32) -> [bool;9] {
+    let mut arr = [false;9];
+    for p in 0..9 {
+        let b = n%2;
+        n = n/2;
+        if b == 1 {
+            arr[9-p] = true
+        }
+    }
+    arr
+}
 
-// height at which a pile topples, not really changeable
-const TOPPLE_HEIGHT: u32 = 4;
-
-// proportion of cells to fill when randomizing
-const RANDOM_FILL: f32 = 0.07; 
-
-// how many grains the huge center pile gets
-const CENTER_HEIGHT: u32 = 98304;
-
-// how many grains a clicked pixel is set to
-const CLICK_HEIGHT: u32 = 256;
-
-
-
-pub fn run_piles() -> Result<(), Error> {
+pub fn run_totalistic(n: u32) -> Result<(), Error> {
     env_logger::init();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
-        create_window("Sandpiles", &event_loop);
+        create_window("Conway's Game of Life", &event_loop);
 
     let surface_texture = SurfaceTexture::new(p_width, p_height, &window);
 
-    let mut piles = SandPiles::new_center(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize);
+    let birth_rule = code_to_rule(n);
+    println!("Rule {} parsed as: {:?}",n,birth_rule);
+    let mut life = ConwayGrid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize, birth_rule);
     let mut pixels = Pixels::new(SCREEN_WIDTH, SCREEN_HEIGHT, surface_texture)?;
     let mut paused = false;
 
     let mut draw_state: Option<bool> = None;
 
+
     event_loop.run(move |event, _, control_flow| {
         // The one and only event that winit_input_helper doesn't have for us...
         if let Event::RedrawRequested(_) = event {
-            piles.draw(pixels.get_frame());
+            life.draw(pixels.get_frame());
             if pixels
                 .render()
                 .map_err(|e| error!("pixels.render() failed: {}", e))
@@ -74,19 +75,10 @@ pub fn run_piles() -> Result<(), Error> {
                 paused = true;
             }
             if input.key_pressed(VirtualKeyCode::R) {
-                piles.clear();
-                piles.randomize();
-            }
-            if input.key_pressed(VirtualKeyCode::N) {
-                piles.clear();
-                piles.center_pile();
-            }
-            if input.key_pressed(VirtualKeyCode::L) {
-                piles.clear();
-                piles.center_line();
+                life.randomize();
             }
             if input.key_pressed(VirtualKeyCode::C) {
-                piles.clear();
+                life.clear();
             }
             // Handle mouse. This is a bit involved since support some simple
             // line drawing (mostly because it makes nice looking patterns).
@@ -114,7 +106,7 @@ pub fn run_piles() -> Result<(), Error> {
 
             if input.mouse_pressed(0) {
                 debug!("Mouse click at {:?}", mouse_cell);
-                draw_state = Some(piles.set_pile(mouse_cell.0, mouse_cell.1));
+                draw_state = Some(life.toggle(mouse_cell.0, mouse_cell.1));
             } else if let Some(draw_alive) = draw_state {
                 let release = input.mouse_released(0);
                 let held = input.mouse_held(0);
@@ -124,11 +116,12 @@ pub fn run_piles() -> Result<(), Error> {
                 // in the middle of drawing, keep going.
                 if release || held {
                     debug!("Draw line of {:?}", draw_alive);
-                    piles.set_line(
+                    life.set_line(
                         mouse_prev_cell.0,
                         mouse_prev_cell.1,
                         mouse_cell.0,
-                        mouse_cell.1
+                        mouse_cell.1,
+                        draw_alive,
                     );
                 }
                 // If they let go or are otherwise not clicking anymore, stop drawing.
@@ -137,7 +130,6 @@ pub fn run_piles() -> Result<(), Error> {
                     draw_state = None;
                 }
             }
-
             // Adjust high DPI factor
             if let Some(factor) = input.scale_factor_changed() {
                 _hidpi_factor = factor;
@@ -147,15 +139,14 @@ pub fn run_piles() -> Result<(), Error> {
                 pixels.resize_surface(size.width, size.height);
             }
             if !paused || input.key_pressed(VirtualKeyCode::Space) {
-                piles.update();
+                life.update();
             }
             window.request_redraw();
         }
     });
 }
 
-
-// This function copied entirely from the Pixels example for Conway's Game of Life
+// COPYPASTE: ideally this could be shared.
 
 /// Create a window for the game.
 ///
@@ -213,43 +204,6 @@ fn create_window(
     )
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-struct Pile {
-    grains: u32,
-}
-
-impl Pile {
-    fn new(grains: u32) -> Self {
-        Self { grains }
-    }
-
-    #[must_use]
-    fn next_state(mut self) -> Self {
-        if self.grains >= TOPPLE_HEIGHT {
-            self.grains -= TOPPLE_HEIGHT;
-        }
-        self
-    }
-
-    fn give_grain(&self) -> u32 {
-        if self.grains >= TOPPLE_HEIGHT {
-            1
-        } else {
-            0
-        }
-    }
-
-    fn add_grains(&self, grains: u32) -> Self {
-        Pile::new(self.grains.saturating_add(grains))
-    }
-
-    fn set_grains_inplace(&mut self, grains: u32) {
-        self.grains = grains
-    }
-
-}
-
-
 /// Generate a pseudorandom seed for the game's PRNG.
 fn generate_seed() -> (u64, u64) {
     use byteorder::{ByteOrder, NativeEndian};
@@ -265,76 +219,69 @@ fn generate_seed() -> (u64, u64) {
     )
 }
 
-fn pixel_color(height: u32) -> [u8; 4] {
-    if height > TOPPLE_HEIGHT {
-        [0xff, 0xff, 0, 0xff]
-    } else if height == TOPPLE_HEIGHT {
-        [0, 0xdd, 0xdd, 0xff]
-    } else {
-        [(height as u8)*50, 0, (height as u8)*80, 0xff]
+
+const INITIAL_FILL: f32 = 0.5;
+
+#[derive(Clone, Copy, Debug, Default)]
+struct Cell {
+    alive: bool,
+}
+
+impl Cell {
+    fn new(alive: bool) -> Self {
+        Self { alive }
+    }
+
+    #[must_use]
+    fn update_neibs(self, n: usize, rule: [bool;9]) -> Self {
+        self.next_state(rule[n])
+    }
+
+    #[must_use]
+    fn next_state(mut self, alive: bool) -> Self {
+        self.alive = alive;
+        self
+    }
+
+    fn set_alive(&mut self, alive: bool) {
+        *self = self.next_state(alive);
     }
 }
 
 #[derive(Clone, Debug)]
-struct SandPiles {
-    piles: Vec<Pile>,
+struct ConwayGrid {
+    cells: Vec<Cell>,
     width: usize,
     height: usize,
-    scratch_piles: Vec<Pile>,
+    // Should always be the same size as `cells`. When updating, we read from
+    // `cells` and write to `scratch_cells`, then swap. Otherwise it's not in
+    // use, and `cells` should be updated directly.
+    scratch_cells: Vec<Cell>,
+    rule: [bool;9],
 }
 
-impl SandPiles {
-    fn new_empty(width: usize, height: usize) -> Self {
+impl ConwayGrid {
+    fn new_empty(width: usize, height: usize, rule: [bool;9]) -> Self {
         assert!(width != 0 && height != 0);
         let size = width.checked_mul(height).expect("too big");
         Self {
-            piles: vec![Pile::default(); size],
-            scratch_piles: vec![Pile::default(); size],
+            cells: vec![Cell::default(); size],
+            scratch_cells: vec![Cell::default(); size],
             width,
             height,
-        }
-    }
-
-    fn new_center(width: usize, height: usize) -> Self {
-        let mut result = Self::new_empty(width, height);
-        result.center_pile();
-        result
-    }
-
-    fn center_pile(&mut self) {
-        let pos = self.grid_idx(SCREEN_WIDTH/2, SCREEN_HEIGHT/2).unwrap();
-        self.piles[pos].set_grains_inplace(CENTER_HEIGHT);
-    }
-
-    fn center_line(&mut self) {
-        let y = SCREEN_HEIGHT/2;
-        for x in 0..SCREEN_WIDTH {
-            if x > 20 && x < SCREEN_WIDTH-20 {
-                let pos = self.grid_idx(x, y).unwrap();
-                self.piles[pos].set_grains_inplace(CLICK_HEIGHT);
-            }
+            rule,
         }
     }
 
     fn randomize(&mut self) {
         let mut rng: randomize::PCG32 = generate_seed().into();
-        for c in self.piles.iter_mut() {
-            let alive = randomize::f32_half_open_right(rng.next_u32()) < RANDOM_FILL;
-            if alive {
-                let grains = rng.next_u32() % 64;
-                *c = Pile::new(grains);
-            }
+        for c in self.cells.iter_mut() {
+            let alive = randomize::f32_half_open_right(rng.next_u32()) > INITIAL_FILL;
+            *c = Cell::new(alive);
         }
     }
 
-    fn clear(&mut self) {
-        for c in self.piles.iter_mut() {
-            *c = Pile::default();
-        }
-    }
-
-    // Each neighbor tall enough to topple contributes a single grain
-    fn count_tall_neibs(&self, x: usize, y: usize) -> u32 {
+    fn count_neibs(&self, x: usize, y: usize) -> usize {
         let (xm1, xp1) = if x == 0 {
             (self.width - 1, x + 1)
         } else if x == self.width - 1 {
@@ -349,43 +296,58 @@ impl SandPiles {
         } else {
             (y - 1, y + 1)
         };
-        self.piles[x + ym1 * self.width].give_grain()
-            + self.piles[xm1 + y * self.width].give_grain()
-            + self.piles[xp1 + y * self.width].give_grain()
-            + self.piles[x + yp1 * self.width].give_grain()
+        self.cells[xm1 + ym1 * self.width].alive as usize
+            + self.cells[x + ym1 * self.width].alive as usize
+            + self.cells[xp1 + ym1 * self.width].alive as usize
+            + self.cells[xm1 + y * self.width].alive as usize
+            + self.cells[xp1 + y * self.width].alive as usize
+            + self.cells[xm1 + yp1 * self.width].alive as usize
+            + self.cells[x + yp1 * self.width].alive as usize
+            + self.cells[xp1 + yp1 * self.width].alive as usize
     }
 
     fn update(&mut self) {
         for y in 0..self.height {
             for x in 0..self.width {
-                let neibs = self.count_tall_neibs(x, y);
+                let neibs = self.count_neibs(x, y);
                 let idx = x + y * self.width;
-                let next = self.piles[idx].next_state().add_grains(neibs);
-                // Write into `self.scratch_piles`, since we're still reading from `self.piles`
-                self.scratch_piles[idx] = next;
+                let next = self.cells[idx].update_neibs(neibs, self.rule);
+                // Write into scratch_cells, since we're still reading from `self.cells`
+                self.scratch_cells[idx] = next;
             }
         }
-        // We've been writing to a the temporary scratch_piles
-        // Now that we're done just swap the memory
-        std::mem::swap(&mut self.scratch_piles, &mut self.piles);
+        std::mem::swap(&mut self.scratch_cells, &mut self.cells);
+    }
+
+    fn toggle(&mut self, x: isize, y: isize) -> bool {
+        if let Some(i) = self.grid_idx(x, y) {
+            let was_alive = self.cells[i].alive;
+            self.cells[i].set_alive(!was_alive);
+            !was_alive
+        } else {
+            false
+        }
+    }
+
+    fn clear(&mut self) {
+        for c in self.cells.iter_mut() {
+            *c = Cell::default();
+        }
     }
 
     fn draw(&self, screen: &mut [u8]) {
-        debug_assert_eq!(screen.len(), 4 * self.piles.len());
-        for (c, pix) in self.piles.iter().zip(screen.chunks_exact_mut(4)) {
-            let color = pixel_color(c.grains);
+        debug_assert_eq!(screen.len(), 4 * self.cells.len());
+        for (c, pix) in self.cells.iter().zip(screen.chunks_exact_mut(4)) {
+            let color = if c.alive {
+                [0xff, 0xff, 0xff, 0xff]
+            } else {
+                [0, 0, 0, 0xff]
+            };
             pix.copy_from_slice(&color);
         }
     }
 
-    fn set_pile(&mut self, x: isize, y: isize) -> bool {
-        if let Some(i) = self.grid_idx(x, y) {
-            self.piles[i].set_grains_inplace(CLICK_HEIGHT);
-        }
-        true
-    }
-
-    fn set_line(&mut self, x0: isize, y0: isize, x1: isize, y1: isize) {
+    fn set_line(&mut self, x0: isize, y0: isize, x1: isize, y1: isize, alive: bool) {
         // probably should do sutherland-hodgeman if this were more serious.
         // instead just clamp the start pos, and draw until moving towards the
         // end pos takes us out of bounds.
@@ -393,7 +355,7 @@ impl SandPiles {
         let y0 = y0.max(0).min(self.height as isize);
         for (x, y) in line_drawing::Bresenham::new((x0, y0), (x1, y1)) {
             if let Some(i) = self.grid_idx(x, y) {
-                self.piles[i].set_grains_inplace(CLICK_HEIGHT);
+                self.cells[i].set_alive(alive);
             } else {
                 break;
             }

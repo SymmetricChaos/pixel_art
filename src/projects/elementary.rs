@@ -1,4 +1,3 @@
-//https://github.com/parasyte/pixels/tree/c2454b01abc11c007d4b9de8525195af942fef0d/examples/conway
 
 #![deny(clippy::all)]
 #![forbid(unsafe_code)]
@@ -10,8 +9,8 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 
-const SCREEN_WIDTH: u32 = 360;
-const SCREEN_HEIGHT: u32 = 240;
+const SCREEN_WIDTH: u32 = 720;
+const SCREEN_HEIGHT: u32 = 480;
 
 pub fn run_elementary() -> Result<(), Error> {
     env_logger::init();
