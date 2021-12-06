@@ -309,9 +309,9 @@ impl SandPiles {
     fn center_line(&mut self) {
         let y = SCREEN_HEIGHT/2;
         for x in 0..SCREEN_WIDTH {
-            if x > 20 && x < SCREEN_WIDTH-20 {
+            if x > 40 && x < SCREEN_WIDTH-40 {
                 let pos = self.grid_idx(x, y).unwrap();
-                self.piles[pos].set_grains_inplace(CLICK_HEIGHT);
+                self.piles[pos].set_grains_inplace(512);
             }
         }
     }
