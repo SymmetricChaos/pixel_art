@@ -32,7 +32,7 @@ pub fn run_totalistic(n: u32) -> Result<(), Error> {
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
-        create_window("Conway's Game of Life", &event_loop);
+        create_window("Totalistic Automata", &event_loop);
 
     let surface_texture = SurfaceTexture::new(p_width, p_height, &window);
 
