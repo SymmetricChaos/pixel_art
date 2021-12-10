@@ -13,18 +13,31 @@ fn select_animation(input: &str) -> Result<(),Error> {
         "2" => projects::elementary::run_elementary(),
         "3" => projects::life::run_life(),
         "4" => {
-            println!("Specify rule code less than 512");
-            let mut text = String::new();
-            io::stdin().read_line(&mut text).expect("Failed to read line");
-            let n = text.trim().parse().unwrap();
-            projects::totalistic::run_totalistic(n)
+            println!("These 'Binary Totalistic Automata' count the number of live cells in a nine cell neighborhood to determine the next state.");
+            loop {
+                println!("Please specify rule code less than 512");
+                let mut text = String::new();
+                io::stdin().read_line(&mut text).expect("Failed to read line");
+                let n = text.trim().parse().unwrap();
+                if n >= 512 {
+                    continue
+                }
+                projects::totalistic::run_totalistic(n)?
+            }
         },
         "5" => {
-            println!("Specify rule code less than 262144");
-            let mut text = String::new();
-            io::stdin().read_line(&mut text).expect("Failed to read line");
-            let n = text.trim().parse().unwrap();
-            projects::outer_totalistic::run_outer_totalistic(n)
+            println!("These 'Binary Outer Totalistic Automata' count the number of live cells in a nine cell neighborhood to determine the next state. However the rule is different depending on whether the center cell is active.");
+            loop {
+                println!("Please specify rule code less than 262144");
+                let mut text = String::new();
+                io::stdin().read_line(&mut text).expect("Failed to read line");
+                let n = text.trim().parse().unwrap();
+                if n >= 262144 {
+                    continue
+                }
+                projects::outer_totalistic::run_outer_totalistic(n)?
+            }
+
         },
         _ => {
             println!("unknown project");
@@ -35,6 +48,7 @@ fn select_animation(input: &str) -> Result<(),Error> {
 
 fn main() -> Result<(),Error> {
     println!("\nWelcome to my pixel animations!\nPress 'q' to quit this screen.");
+    println!("\nWARNING: Totalistic and Outer Totalistic may produce flashing lights.");
     loop {
         println!("\n\nWhat would you like to see?\n\n1) Sandpiles\n2) Rule 110\n3) Life (not mine)\n4) Totalistic\n5) Outer Totalistic");
         let mut val = String::new();
