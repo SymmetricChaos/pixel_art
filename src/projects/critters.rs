@@ -14,7 +14,7 @@ const SCREEN_WIDTH: u32 = 360;
 const SCREEN_HEIGHT: u32 = 240;
 
 
-pub fn run_critters(n: u32) -> Result<(), Error> {
+pub fn run_critters() -> Result<(), Error> {
     env_logger::init();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
@@ -23,7 +23,7 @@ pub fn run_critters(n: u32) -> Result<(), Error> {
 
     let surface_texture = SurfaceTexture::new(p_width, p_height, &window);
 
-    let mut life = MarGrid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize, birth_rule);
+    let mut life = MarGrid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize);
     let mut pixels = Pixels::new(SCREEN_WIDTH, SCREEN_HEIGHT, surface_texture)?;
     let mut paused = false;
 
@@ -218,11 +218,6 @@ impl Cell {
     }
 
     #[must_use]
-    fn update_neibs(self, n: usize, rule: [bool;9]) -> Self {
-        self.next_state(rule[n])
-    }
-
-    #[must_use]
     fn next_state(mut self, alive: bool) -> Self {
         self.alive = alive;
         self
@@ -242,21 +237,18 @@ struct MarGrid {
     cells: Vec<Cell>,
     width: usize,
     height: usize,
-    // Should always be the same size as `cells`. When updating, we read from
-    // `cells` and write to `scratch_cells`, then swap. Otherwise it's not in
-    // use, and `cells` should be updated directly.
-    scratch_cells: Vec<Cell>,
+    phase: bool,
 }
 
 impl MarGrid {
-    fn new_empty(width: usize, height: usize, rule: [bool;9]) -> Self {
+    fn new_empty(width: usize, height: usize) -> Self {
         assert!(width != 0 && height != 0);
         let size = width.checked_mul(height).expect("too big");
         Self {
             cells: vec![Cell::default(); size],
-            scratch_cells: vec![Cell::default(); size],
             width,
             height,
+            phase: false,
         }
     }
 
@@ -269,14 +261,14 @@ impl MarGrid {
     }
 
     fn count_big_cell(&self, x: usize, y: usize) -> (usize,[usize;4]) {
-        let (xm1, xp1) = if x == 0 {
+        let (_, xp1) = if x == 0 {
             (self.width - 1, x + 1)
         } else if x == self.width - 1 {
             (x - 1, 0)
         } else {
             (x - 1, x + 1)
         };
-        let (ym1, yp1) = if y == 0 {
+        let (_, yp1) = if y == 0 {
             (self.height - 1, y + 1)
         } else if y == self.height - 1 {
             (y - 1, 0)
@@ -287,31 +279,61 @@ impl MarGrid {
             + self.cells[xp1 + y * self.width].alive as usize
             + self.cells[x + yp1 * self.width].alive as usize
             + self.cells[xp1 + yp1 * self.width].alive as usize;
+        // Cells in clockwise order
         let cell_pos = [x + y *self.width, 
                                xp1 + y * self.width,
-                               x + yp1 * self.width,
-                               xp1 + yp1 * self.width];
+                               xp1 + yp1 * self.width,
+                               x + yp1 * self.width];
         (count,cell_pos)
     }
 
     fn update_big_cell(&mut self, n: usize, cells: [usize;4]) {
         if n == 2 {
             return
-        } 
+        } else if [0,1,4].contains(&n) {
+            for p in cells {
+                self.cells[p].toggle()
+            }
+        } else {
+            self.cells[cells[2]] = self.cells[cells[0]];
+            self.cells[cells[3]] = self.cells[cells[1]];
+            self.cells[cells[0]] = self.cells[cells[2]];
+            self.cells[cells[1]] = self.cells[cells[3]];
+            for p in cells {
+                self.cells[p].toggle()
+            }
+        }
+    }
+
+    fn update(&mut self) {
+        if self.phase {
+            self.update_grid_1()
+        } else {
+            self.update_grid_2()
+        }
+        self.phase = !self.phase
     }
 
     fn update_grid_1(&mut self) {
-        for y in 0..self.height/2 {
-            for x in 0..self.width/2 {
+        for yt in 0..self.height/2 {
+            for xt in 0..self.width/2 {
+                let idx = xt*2+yt*self.width*2;
+                let (x, y) = self.idx_grid(idx).unwrap();
                 let (count, cell_pos) = self.count_big_cell(x,y);
-                let idx = x*2+y*self.width*2;
-
-                // Write into scratch_cells, since we're still reading from `self.cells`
-                self.scratch_cells[idx] = next;
+                self.update_big_cell(count,cell_pos);
             }
         }
+    }
 
-        std::mem::swap(&mut self.scratch_cells, &mut self.cells);
+    fn update_grid_2(&mut self) {
+        for yt in 0..(self.height/2-1) {
+            for xt in 0..(self.width/2-1) {
+                let idx = xt*2+yt*self.width*2;
+                let (x, y) = self.idx_grid(idx).unwrap();
+                let (count, cell_pos) = self.count_big_cell(x+1,y+1);
+                self.update_big_cell(count,cell_pos);
+            }
+        }
     }
 
     fn toggle(&mut self, x: isize, y: isize) -> bool {
@@ -367,5 +389,16 @@ impl MarGrid {
         } else {
             None
         }
+    }
+
+    fn idx_grid<I: std::convert::TryInto<usize>>(&self, n: I) -> Option<(usize,usize)> {
+        if let Ok(pos) = n.try_into() {
+            let x = pos%self.width;
+            let y = pos/self.width;
+            Some((x,y))
+        } else {
+            None
+        }
+        
     }
 }
