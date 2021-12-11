@@ -205,7 +205,7 @@ fn generate_seed() -> (u64, u64) {
 }
 
 
-const INITIAL_FILL: f32 = 0.5;
+const INITIAL_FILL: f32 = 0.2;
 
 #[derive(Clone, Copy, Debug, Default)]
 struct Cell {
@@ -289,12 +289,15 @@ impl MarGrid {
 
     fn update_big_cell(&mut self, n: usize, cells: [usize;4]) {
         if n == 2 {
+            // No change
             return
         } else if [0,1,4].contains(&n) {
+            // Invert the whole block
             for p in cells {
                 self.cells[p].toggle()
             }
         } else {
+            // Rotate 180 degree than inver the whole block
             let t0 = self.cells[cells[0]];
             let t1 = self.cells[cells[1]];
             let t2 = self.cells[cells[2]];
@@ -337,6 +340,8 @@ impl MarGrid {
             }
         }
     }
+
+
 
     fn toggle(&mut self, x: isize, y: isize) -> bool {
         if let Some(i) = self.grid_idx(x, y) {

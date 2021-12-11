@@ -9,9 +9,18 @@ mod projects;
 
 fn select_animation(input: &str) -> Result<(),Error> {
     match input {
-        "1" => projects::sandpiles::run_piles(),
-        "2" => projects::elementary::run_elementary(),
-        "3" => projects::life::run_life(),
+        "1" => {
+            println!("Sandpiles are a very simple 2D cellular automata in which a pile with four or more grains drops one grain into each of its four immediate neightbors. Despite this extremely simple rule Sandpiles create durable patterns and shapes.");
+            projects::sandpiles::run_piles()
+        },
+        "2" => {
+            println!("This one dimensional cellular automata is known as Rule 110. Each row is the next stage of the row above it. If properly initialized and given sufficient space Rule 110 is capable to general computation.");
+            projects::elementary::run_elementary()
+        },
+        "3" => {
+            println!("This is a fancy version of Conway's Game of Life that was provided as an example for the Pixels library");
+            projects::life::run_life()
+        },
         "4" => {
             println!("These 'Binary Totalistic Automata' count the number of live cells in a nine cell neighborhood to determine the next state.");
             loop {
@@ -62,7 +71,7 @@ fn main() -> Result<(),Error> {
         }
 
         if !v.chars().all(char::is_numeric) {
-            println!("\nERROR: Must input an integer or a valid command.");
+            println!("\nERROR: Must input a valid command.");
             continue
         }
         println!("\n\nControls for animation:\nC: clear screen\nP: pause\nR: randomize screen\nSPACE: frame by frame\nESC: close screen");
