@@ -237,7 +237,7 @@ struct MarGrid {
     cells: Vec<Cell>,
     width: usize,
     height: usize,
-    phase: bool,
+    reverse: bool,
 }
 
 impl MarGrid {
@@ -248,7 +248,7 @@ impl MarGrid {
             cells: vec![Cell::default(); size],
             width,
             height,
-            phase: false,
+            reverse: false,
         }
     }
 
@@ -295,10 +295,14 @@ impl MarGrid {
                 self.cells[p].toggle()
             }
         } else {
-            self.cells[cells[2]] = self.cells[cells[0]];
-            self.cells[cells[3]] = self.cells[cells[1]];
-            self.cells[cells[0]] = self.cells[cells[2]];
-            self.cells[cells[1]] = self.cells[cells[3]];
+            let t0 = self.cells[cells[0]];
+            let t1 = self.cells[cells[1]];
+            let t2 = self.cells[cells[2]];
+            let t3 = self.cells[cells[3]];
+            self.cells[cells[0]] = t2;
+            self.cells[cells[1]] = t3;
+            self.cells[cells[2]] = t0;
+            self.cells[cells[3]] = t1;
             for p in cells {
                 self.cells[p].toggle()
             }
@@ -308,9 +312,9 @@ impl MarGrid {
     fn update(&mut self) {
         self.update_grid_1();
         self.update_grid_2();
-        self.phase = !self.phase
     }
 
+    #[inline]
     fn update_grid_1(&mut self) {
         for yt in 0..self.height/2 {
             for xt in 0..self.width/2 {
@@ -322,6 +326,7 @@ impl MarGrid {
         }
     }
 
+    #[inline]
     fn update_grid_2(&mut self) {
         for yt in 0..self.height/2 {
             for xt in 0..self.width/2 {

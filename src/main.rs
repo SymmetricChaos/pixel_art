@@ -51,7 +51,7 @@ fn main() -> Result<(),Error> {
     println!("\nWelcome to my pixel animations!\nPress 'q' to quit this screen.");
     println!("\nWARNING: Totalistic and Outer Totalistic may produce flashing lights.");
     loop {
-        println!("\n\nWhat would you like to see?\n\n1) Sandpiles\n2) Rule 110\n3) Life (not mine)\n4) Totalistic\n5) Outer Totalistic\n5) Critters");
+        println!("\n\nWhat would you like to see?\n\n1) Sandpiles\n2) Rule 110\n3) Life (not mine)\n4) Totalistic\n5) Outer Totalistic\n6) Critters");
         let mut val = String::new();
         io::stdin().read_line(&mut val).expect("Failed to read line");
 
