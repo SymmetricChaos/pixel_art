@@ -306,11 +306,8 @@ impl MarGrid {
     }
 
     fn update(&mut self) {
-        if self.phase {
-            self.update_grid_1()
-        } else {
-            self.update_grid_2()
-        }
+        self.update_grid_1();
+        self.update_grid_2();
         self.phase = !self.phase
     }
 
@@ -326,8 +323,8 @@ impl MarGrid {
     }
 
     fn update_grid_2(&mut self) {
-        for yt in 0..(self.height/2-1) {
-            for xt in 0..(self.width/2-1) {
+        for yt in 0..self.height/2 {
+            for xt in 0..self.width/2 {
                 let idx = xt*2+yt*self.width*2;
                 let (x, y) = self.idx_grid(idx).unwrap();
                 let (count, cell_pos) = self.count_big_cell(x+1,y+1);
