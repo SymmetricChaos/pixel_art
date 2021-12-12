@@ -50,7 +50,13 @@ fn select_animation(input: &str) -> Result<(),Error> {
         },
         "6" => {
             println!("Critters is a reversible automata. This implementation preserves the number of living cells at every drawn frame, though not during calculation.");
+            println!("Press V to reverse. (WORK IN PROGRESS)");
             projects::critters::run_critters()
+        },
+        "7" => {
+            println!("This automata rotates each block 90 degree if and only if it contains exactly one live cell.");
+            println!("Press V to reverse.");
+            projects::single_rotation::run_rotor()
         },
         _ => {
             println!("unknown project");
@@ -63,7 +69,7 @@ fn main() -> Result<(),Error> {
     println!("\nWelcome to my pixel animations!\nPress 'q' to quit this screen.");
     println!("\nWARNING: Totalistic and Outer Totalistic may produce flashing lights.");
     loop {
-        println!("\n\nWhat would you like to see?\n\n1) Sandpiles\n2) Rule 110\n3) Life (not mine)\n4) Totalistic\n5) Outer Totalistic\n6) Critters");
+        println!("\n\nWhat would you like to see?\n\n1) Sandpiles\n2) Rule 110\n3) Life (not mine)\n4) Totalistic\n5) Outer Totalistic\n6) Critters\n7) Rotator");
         let mut val = String::new();
         io::stdin().read_line(&mut val).expect("Failed to read line");
 

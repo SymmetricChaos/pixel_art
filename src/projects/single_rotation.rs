@@ -14,7 +14,7 @@ const SCREEN_WIDTH: u32 = 360;
 const SCREEN_HEIGHT: u32 = 240;
 
 
-pub fn run_critters() -> Result<(), Error> {
+pub fn run_rotor() -> Result<(), Error> {
     env_logger::init();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
@@ -241,6 +241,7 @@ struct MarGrid {
     width: usize,
     height: usize,
     reverse: bool,
+    phase: bool,
 }
 
 impl MarGrid {
@@ -252,10 +253,12 @@ impl MarGrid {
             width,
             height,
             reverse: false,
+            phase: false,
         }
     }
 
     fn reverse(&mut self) {
+        println!("Reversed");
         self.reverse = !self.reverse
     }
 
@@ -268,19 +271,15 @@ impl MarGrid {
     }
 
     fn count_big_cell(&self, x: usize, y: usize) -> (usize,[usize;4]) {
-        let (_, xp1) = if x == 0 {
-            (self.width - 1, x + 1)
-        } else if x == self.width - 1 {
-            (x - 1, 0)
+        let xp1 = if x == self.width - 1 {
+            0
         } else {
-            (x - 1, x + 1)
+            x + 1
         };
-        let (_, yp1) = if y == 0 {
-            (self.height - 1, y + 1)
-        } else if y == self.height - 1 {
-            (y - 1, 0)
+        let yp1 = if y == self.height - 1 {
+            0
         } else {
-            (y - 1, y + 1)
+            y + 1
         };
         let count = self.cells[x + y *self.width].alive as usize
             + self.cells[xp1 + y * self.width].alive as usize
@@ -295,37 +294,38 @@ impl MarGrid {
     }
 
     fn update_big_cell(&mut self, n: usize, cells: [usize;4]) {
-        if n == 2 {
-            // No change
-            return
-        } else if [0,1,4].contains(&n) {
-            // Invert the whole block
-            for p in cells {
-                self.cells[p].toggle()
-            }
-        } else {
-            // Rotate 180 degree than invert the whole block
+        if n == 1 {
+            // Rotate 90 degrees
             let t0 = self.cells[cells[0]];
             let t1 = self.cells[cells[1]];
             let t2 = self.cells[cells[2]];
             let t3 = self.cells[cells[3]];
-            self.cells[cells[0]] = t2;
-            self.cells[cells[1]] = t3;
-            self.cells[cells[2]] = t0;
-            self.cells[cells[3]] = t1;
-            for p in cells {
-                self.cells[p].toggle()
-            }
+            self.cells[cells[0]] = t1;
+            self.cells[cells[1]] = t2;
+            self.cells[cells[2]] = t3;
+            self.cells[cells[3]] = t0;
+        }
+    }
+
+    fn update_big_cell_reverse(&mut self, n: usize, cells: [usize;4]) {
+        if n == 1 {
+            // Rotate -90 degrees
+            let t0 = self.cells[cells[0]];
+            let t1 = self.cells[cells[1]];
+            let t2 = self.cells[cells[2]];
+            let t3 = self.cells[cells[3]];
+            self.cells[cells[0]] = t3;
+            self.cells[cells[1]] = t0;
+            self.cells[cells[2]] = t1;
+            self.cells[cells[3]] = t2;
         }
     }
 
     fn update(&mut self) {
-        if self.reverse {
-            self.update_grid_2();
-            self.update_grid_1();
-        } else {
-            self.update_grid_1();
-            self.update_grid_2();
+        self.phase = !self.phase;
+        match self.phase {
+            true => self.update_grid_1(),
+            false => self.update_grid_2(),
         }
     }
 
@@ -336,7 +336,11 @@ impl MarGrid {
                 let idx = xt*2+yt*self.width*2;
                 let (x, y) = self.idx_grid(idx).unwrap();
                 let (count, cell_pos) = self.count_big_cell(x,y);
-                self.update_big_cell(count,cell_pos);
+                match self.reverse{
+                    true => self.update_big_cell_reverse(count,cell_pos),
+                    false => self.update_big_cell(count,cell_pos),
+                }
+                
             }
         }
     }
@@ -348,12 +352,13 @@ impl MarGrid {
                 let idx = xt*2+yt*self.width*2;
                 let (x, y) = self.idx_grid(idx).unwrap();
                 let (count, cell_pos) = self.count_big_cell(x+1,y+1);
-                self.update_big_cell(count,cell_pos);
+                match self.reverse{
+                    true => self.update_big_cell_reverse(count,cell_pos),
+                    false => self.update_big_cell(count,cell_pos),
+                }
             }
         }
     }
-
-
 
     fn toggle(&mut self, x: isize, y: isize) -> bool {
         if let Some(i) = self.grid_idx(x, y) {
