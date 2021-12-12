@@ -48,7 +48,10 @@ fn select_animation(input: &str) -> Result<(),Error> {
             }
 
         },
-        "6" => projects::critters::run_critters(),
+        "6" => {
+            println!("Critters is a reversible automata. This implementation preserves the number of living cells at every drawn frame, though not during calculation.");
+            projects::critters::run_critters()
+        },
         _ => {
             println!("unknown project");
             Ok(())
