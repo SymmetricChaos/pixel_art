@@ -259,7 +259,8 @@ impl MarGrid {
 
     fn reverse(&mut self) {
         println!("Reversed");
-        self.reverse = !self.reverse
+        self.phase = !self.phase;
+        self.reverse = !self.reverse;
     }
 
     fn randomize(&mut self) {
