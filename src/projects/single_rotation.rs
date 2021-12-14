@@ -337,7 +337,7 @@ impl MarGrid {
                 let idx = xt*2+yt*self.width*2;
                 let (x, y) = self.idx_grid(idx).unwrap();
                 let (count, cell_pos) = self.count_big_cell(x,y);
-                match self.reverse{
+                match self.reverse {
                     true => self.update_big_cell_reverse(count,cell_pos),
                     false => self.update_big_cell(count,cell_pos),
                 }
@@ -353,7 +353,7 @@ impl MarGrid {
                 let idx = xt*2+yt*self.width*2;
                 let (x, y) = self.idx_grid(idx).unwrap();
                 let (count, cell_pos) = self.count_big_cell(x+1,y+1);
-                match self.reverse{
+                match self.reverse {
                     true => self.update_big_cell_reverse(count,cell_pos),
                     false => self.update_big_cell(count,cell_pos),
                 }
@@ -390,9 +390,6 @@ impl MarGrid {
     }
 
     fn set_line(&mut self, x0: isize, y0: isize, x1: isize, y1: isize, alive: bool) {
-        // probably should do sutherland-hodgeman if this were more serious.
-        // instead just clamp the start pos, and draw until moving towards the
-        // end pos takes us out of bounds.
         let x0 = x0.max(0).min(self.width as isize);
         let y0 = y0.max(0).min(self.height as isize);
         for (x, y) in line_drawing::Bresenham::new((x0, y0), (x1, y1)) {

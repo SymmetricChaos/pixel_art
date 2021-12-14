@@ -266,9 +266,6 @@ struct ConwayGrid {
     cells: Vec<Cell>,
     width: usize,
     height: usize,
-    // Should always be the same size as `cells`. When updating, we read from
-    // `cells` and write to `scratch_cells`, then swap. Otherwise it's not in
-    // use, and `cells` should be updated directly.
     scratch_cells: Vec<Cell>,
     live: [bool;9],
     dead: [bool;9],
