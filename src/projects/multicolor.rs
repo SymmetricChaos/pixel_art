@@ -5,52 +5,25 @@
 
 use log::{debug, error};
 use pixels::{Error, Pixels, SurfaceTexture};
+use winit::dpi::{LogicalPosition, LogicalSize, PhysicalSize};
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 
-use super::create_window;
-
 const SCREEN_WIDTH: u32 = 360;
 const SCREEN_HEIGHT: u32 = 240;
 
-// Nine-square binary outer totalistic rule using Wolfram's method
-// for n < 262144
-// https://mathematica.stackexchange.com/questions/153388/how-to-calculate-cellularautomaton-rule-numbers-in-higher-dimensions
-fn code_to_rule(mut n: u32) -> ([bool;9],[bool;9]) {
-    let mut live = [false;9];
-    let mut dead = [false;9];
-    for p in 0..18 {
-        let b = n%2;
-        n = n/2;
 
-        if b == 1 {
-            if p % 2 == 0{
-                live[p/2] = true
-            } else {
-                dead[p/2] = true
-            }
-        }
-    }
-    (live,dead)
-}
-
-pub fn run_outer_totalistic(n: u32) -> Result<(), Error> {
+pub fn run_tricolor() -> Result<(), Error> {
     env_logger::init();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
-        create_window(
-            SCREEN_WIDTH, 
-            SCREEN_HEIGHT, 
-            "Outer Totalistic Automata", 
-            &event_loop);
-    
+        create_window("Critters", &event_loop);
+
     let surface_texture = SurfaceTexture::new(p_width, p_height, &window);
 
-    let (live_rule,dead_rule) = code_to_rule(n);
-    println!("Rule {} parsed as:\n{:?}\n{:?}",n,live_rule,dead_rule);
-    let mut life = ConwayGrid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize, live_rule, dead_rule);
+    let mut life = MarGrid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize);
     let mut pixels = Pixels::new(SCREEN_WIDTH, SCREEN_HEIGHT, surface_texture)?;
     let mut paused = false;
 
@@ -175,52 +148,41 @@ fn generate_seed() -> (u64, u64) {
 }
 
 
-const INITIAL_FILL: f32 = 0.5;
+const INITIAL_FILL: f32 = 0.95;
 
 #[derive(Clone, Copy, Debug, Default)]
 struct Cell {
-    alive: bool
+    value: u8,
 }
 
 impl Cell {
-    fn new(alive: bool) -> Self {
-        Self { alive }
+    fn new(value: u8) -> Self {
+        Self { value }
     }
 
     #[must_use]
-    fn update_neibs(self, n: usize, live: [bool;9], dead: [bool;9],) -> Self {
-        let next_alive = if self.alive {
-            dead[n]
-        } else {
-            live[n]
-        };
-        self.next_state(next_alive)
-    }
-
-    #[must_use]
-    fn next_state(mut self, alive: bool) -> Self {
-        self.alive = alive;
+    fn next_state(mut self, value: u8) -> Self {
+        self.value = value;
         self
     }
 
-    fn set_alive(&mut self, alive: bool) {
-        *self = self.next_state(alive);
+    fn set_alive(&mut self, value: u8) {
+        *self = self.next_state(value);
     }
+
 
 }
 
 #[derive(Clone, Debug)]
-struct ConwayGrid {
+struct MarGrid {
     cells: Vec<Cell>,
+    scratch_cells: Vec<Cell>,
     width: usize,
     height: usize,
-    scratch_cells: Vec<Cell>,
-    live: [bool;9],
-    dead: [bool;9],
 }
 
-impl ConwayGrid {
-    fn new_empty(width: usize, height: usize, live: [bool;9], dead: [bool;9]) -> Self {
+impl MarGrid {
+    fn new_empty(width: usize, height: usize) -> Self {
         assert!(width != 0 && height != 0);
         let size = width.checked_mul(height).expect("too big");
         Self {
@@ -228,8 +190,6 @@ impl ConwayGrid {
             scratch_cells: vec![Cell::default(); size],
             width,
             height,
-            live,
-            dead,
         }
     }
 
@@ -241,43 +201,93 @@ impl ConwayGrid {
         }
     }
 
-    fn count_neibs(&self, x: usize, y: usize) -> usize {
-        let (xm1, xp1) = if x == 0 {
+    fn count_big_cell(&self, x: usize, y: usize) -> (usize,[usize;4]) {
+        let (_, xp1) = if x == 0 {
             (self.width - 1, x + 1)
         } else if x == self.width - 1 {
             (x - 1, 0)
         } else {
             (x - 1, x + 1)
         };
-        let (ym1, yp1) = if y == 0 {
+        let (_, yp1) = if y == 0 {
             (self.height - 1, y + 1)
         } else if y == self.height - 1 {
             (y - 1, 0)
         } else {
             (y - 1, y + 1)
         };
-        self.cells[xm1 + ym1 * self.width].alive as usize
-            + self.cells[x + ym1 * self.width].alive as usize
-            + self.cells[xp1 + ym1 * self.width].alive as usize
-            + self.cells[xm1 + y * self.width].alive as usize
+        let count = self.cells[x + y *self.width].alive as usize
             + self.cells[xp1 + y * self.width].alive as usize
-            + self.cells[xm1 + yp1 * self.width].alive as usize
             + self.cells[x + yp1 * self.width].alive as usize
-            + self.cells[xp1 + yp1 * self.width].alive as usize
+            + self.cells[xp1 + yp1 * self.width].alive as usize;
+        // Cells in clockwise order
+        let cell_pos = [x + y *self.width, 
+                               xp1 + y * self.width,
+                               xp1 + yp1 * self.width,
+                               x + yp1 * self.width];
+        (count,cell_pos)
+    }
+
+    fn update_big_cell(&mut self, n: usize, cells: [usize;4]) {
+        if n == 2 {
+            // No change
+            return
+        } else if [0,1,4].contains(&n) {
+            // Invert the whole block
+            for p in cells {
+                self.cells[p].toggle()
+            }
+        } else {
+            // Rotate 180 degree than invert the whole block
+            let t0 = self.cells[cells[0]];
+            let t1 = self.cells[cells[1]];
+            let t2 = self.cells[cells[2]];
+            let t3 = self.cells[cells[3]];
+            self.cells[cells[0]] = t2;
+            self.cells[cells[1]] = t3;
+            self.cells[cells[2]] = t0;
+            self.cells[cells[3]] = t1;
+            for p in cells {
+                self.cells[p].toggle()
+            }
+        }
     }
 
     fn update(&mut self) {
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let neibs = self.count_neibs(x, y);
-                let idx = x + y * self.width;
-                let next = self.cells[idx].update_neibs(neibs, self.live, self.dead);
-                // Write into scratch_cells, since we're still reading from `self.cells`
-                self.scratch_cells[idx] = next;
+        if self.reverse {
+            self.update_grid_2();
+            self.update_grid_1();
+        } else {
+            self.update_grid_1();
+            self.update_grid_2();
+        }
+    }
+
+    #[inline]
+    fn update_grid_1(&mut self) {
+        for yt in 0..self.height/2 {
+            for xt in 0..self.width/2 {
+                let idx = xt*2+yt*self.width*2;
+                let (x, y) = self.idx_grid(idx).unwrap();
+                let (count, cell_pos) = self.count_big_cell(x,y);
+                self.update_big_cell(count,cell_pos);
             }
         }
-        std::mem::swap(&mut self.scratch_cells, &mut self.cells);
     }
+
+    #[inline]
+    fn update_grid_2(&mut self) {
+        for yt in 0..self.height/2 {
+            for xt in 0..self.width/2 {
+                let idx = xt*2+yt*self.width*2;
+                let (x, y) = self.idx_grid(idx).unwrap();
+                let (count, cell_pos) = self.count_big_cell(x+1,y+1);
+                self.update_big_cell(count,cell_pos);
+            }
+        }
+    }
+
+
 
     fn toggle(&mut self, x: isize, y: isize) -> bool {
         if let Some(i) = self.grid_idx(x, y) {
@@ -332,5 +342,16 @@ impl ConwayGrid {
         } else {
             None
         }
+    }
+
+    fn idx_grid<I: std::convert::TryInto<usize>>(&self, n: I) -> Option<(usize,usize)> {
+        if let Ok(pos) = n.try_into() {
+            let x = pos%self.width;
+            let y = pos/self.width;
+            Some((x,y))
+        } else {
+            None
+        }
+        
     }
 }
