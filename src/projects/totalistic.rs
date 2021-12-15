@@ -5,7 +5,6 @@
 
 use log::{debug, error};
 use pixels::{Error, Pixels, SurfaceTexture};
-use winit::dpi::{LogicalPosition, LogicalSize, PhysicalSize};
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
@@ -37,7 +36,7 @@ pub fn run_totalistic(n: u32) -> Result<(), Error> {
         create_window(
             SCREEN_WIDTH, 
             SCREEN_HEIGHT, 
-            "Outer Totalistic Automata", 
+            "Totalistic Automata", 
             &event_loop);
     
     let surface_texture = SurfaceTexture::new(p_width, p_height, &window);
