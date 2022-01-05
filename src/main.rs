@@ -80,7 +80,7 @@ fn main() -> Result<(),Error> {
         }
 
         if !v.chars().all(char::is_numeric) {
-            println!("\nERROR: Must input a valid command.");
+            println!("\nMust input a valid command.");
             continue
         }
         println!("\n\nControls for animation:\nC: clear screen\nP: pause\nR: randomize screen\nSPACE: frame by frame\nESC: close screen");

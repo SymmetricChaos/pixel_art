@@ -43,12 +43,11 @@ pub fn run_totalistic(n: u32) -> Result<(), Error> {
 
     let birth_rule = code_to_rule(n);
     println!("Rule {} parsed as: {:?}",n,birth_rule);
-    let mut life = ConwayGrid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize, birth_rule);
+    let mut life = Grid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize, birth_rule);
     let mut pixels = Pixels::new(SCREEN_WIDTH, SCREEN_HEIGHT, surface_texture)?;
     let mut paused = false;
 
     let mut draw_state: Option<bool> = None;
-
 
     event_loop.run(move |event, _, control_flow| {
         // The one and only event that winit_input_helper doesn't have for us...
@@ -181,7 +180,7 @@ impl Cell {
 }
 
 #[derive(Clone, Debug)]
-struct ConwayGrid {
+struct Grid {
     cells: Vec<Cell>,
     width: usize,
     height: usize,
@@ -192,7 +191,7 @@ struct ConwayGrid {
     rule: [bool;9],
 }
 
-impl ConwayGrid {
+impl Grid {
     fn new_empty(width: usize, height: usize, rule: [bool;9]) -> Self {
         assert!(width != 0 && height != 0);
         let size = width.checked_mul(height).expect("too big");
