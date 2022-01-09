@@ -9,10 +9,9 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 
-use super::{create_window,generate_seed};
+use crate::auxiliary::randomizer::generate_seed;
+use crate::auxiliary::window::{create_window, SCREEN_WIDTH, SCREEN_HEIGHT};
 
-const SCREEN_WIDTH: u32 = 360;
-const SCREEN_HEIGHT: u32 = 240;
 const INITIAL_FILL: f32 = 0.95;
 
 
@@ -22,8 +21,6 @@ pub fn run_critters() -> Result<(), Error> {
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
         create_window(
-            SCREEN_WIDTH, 
-            SCREEN_HEIGHT, 
             "Critters", 
             &event_loop);
     
@@ -188,7 +185,12 @@ impl MarGrid {
     }
 
     fn reverse(&mut self) {
-        self.reverse = !self.reverse
+        self.update_grid_2();
+        self.reverse = !self.reverse;
+        match self.reverse {
+            true => println!("Reverse"),
+            false => println!("Forward"),
+        }
     }
 
     fn randomize(&mut self) {
@@ -236,7 +238,7 @@ impl MarGrid {
                 self.cells[p].toggle()
             }
         } else {
-            // Rotate 180 degree than invert the whole block
+            // Rotate 180 degree then invert the whole block
             let t0 = self.cells[cells[0]];
             let t1 = self.cells[cells[1]];
             let t2 = self.cells[cells[2]];

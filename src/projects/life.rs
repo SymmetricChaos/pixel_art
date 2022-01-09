@@ -9,10 +9,9 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 
-use super::{create_window,generate_seed};
+use crate::auxiliary::randomizer::generate_seed;
+use crate::auxiliary::window::{create_window, SCREEN_WIDTH, SCREEN_HEIGHT};
 
-const SCREEN_WIDTH: u32 = 360;
-const SCREEN_HEIGHT: u32 = 240;
 
 pub fn run_life() -> Result<(), Error> {
     env_logger::init();
@@ -20,8 +19,6 @@ pub fn run_life() -> Result<(), Error> {
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
         create_window(
-            SCREEN_WIDTH, 
-            SCREEN_HEIGHT, 
             "Conway's Game of Life", 
             &event_loop);
 

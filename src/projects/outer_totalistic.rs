@@ -9,10 +9,9 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 
-use super::create_window;
+use crate::auxiliary::randomizer::generate_seed;
+use crate::auxiliary::window::{create_window, SCREEN_WIDTH, SCREEN_HEIGHT};
 
-const SCREEN_WIDTH: u32 = 360;
-const SCREEN_HEIGHT: u32 = 240;
 
 // Nine-square binary outer totalistic rule using Wolfram's method
 // for n < 262144
@@ -41,8 +40,6 @@ pub fn run_outer_totalistic(n: u32) -> Result<(), Error> {
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
         create_window(
-            SCREEN_WIDTH, 
-            SCREEN_HEIGHT, 
             "Outer Totalistic Automata", 
             &event_loop);
     
@@ -158,21 +155,6 @@ pub fn run_outer_totalistic(n: u32) -> Result<(), Error> {
     });
 }
 
-
-/// Generate a pseudorandom seed for the game's PRNG.
-fn generate_seed() -> (u64, u64) {
-    use byteorder::{ByteOrder, NativeEndian};
-    use getrandom::getrandom;
-
-    let mut seed = [0_u8; 16];
-
-    getrandom(&mut seed).expect("failed to getrandom");
-
-    (
-        NativeEndian::read_u64(&seed[0..8]),
-        NativeEndian::read_u64(&seed[8..16]),
-    )
-}
 
 
 const INITIAL_FILL: f32 = 0.5;

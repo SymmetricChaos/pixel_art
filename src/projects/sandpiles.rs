@@ -7,11 +7,9 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 
-use super::{create_window,generate_seed};
+use crate::auxiliary::randomizer::generate_seed;
+use crate::auxiliary::window::{create_window, SCREEN_WIDTH, SCREEN_HEIGHT};
 
-// Small window dimensions that should scale nicely on a 1080p or 4K screen
-const SCREEN_WIDTH: u32 = 360;
-const SCREEN_HEIGHT: u32 = 240;
 
 // We are going to create a very simple sandpile dynamical system
 // https://en.wikipedia.org/wiki/Abelian_sandpile_model
@@ -36,8 +34,6 @@ pub fn run_piles() -> Result<(), Error> {
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
         create_window(
-            SCREEN_WIDTH, 
-            SCREEN_HEIGHT, 
             "Sandpiles", 
             &event_loop);
     
@@ -59,7 +55,6 @@ pub fn run_piles() -> Result<(), Error> {
                 .is_err()
             {
                 *control_flow = ControlFlow::Exit;
-                return;
             }
         }
 
@@ -69,7 +64,6 @@ pub fn run_piles() -> Result<(), Error> {
             // Close events
             if input.key_pressed(VirtualKeyCode::Escape) || input.quit() {
                 *control_flow = ControlFlow::Exit;
-                return;
             }
             if input.key_pressed(VirtualKeyCode::P) {
                 paused = !paused;

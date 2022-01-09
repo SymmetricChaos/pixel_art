@@ -7,6 +7,9 @@ use winit::dpi::{LogicalPosition, LogicalSize, PhysicalSize};
 use winit::event_loop::EventLoop;
 
 
+pub const SCREEN_WIDTH: u32 = 360;
+pub const SCREEN_HEIGHT: u32 = 240;
+
 // COPYPASTE: ideally this could be shared.
 
 /// Create a window for the game.
@@ -18,8 +21,6 @@ use winit::event_loop::EventLoop;
 /// Tuple of `(window, surface, width, height, hidpi_factor)`
 /// `width` and `height` are in `PhysicalSize` units.
 pub fn create_window(
-    screen_width: u32,
-    screen_height: u32,
     title: &str,
     event_loop: &EventLoop<()>,
 ) -> (winit::window::Window, u32, u32, f64) {
@@ -32,8 +33,8 @@ pub fn create_window(
     let hidpi_factor = window.scale_factor();
 
     // Get dimensions
-    let width = screen_width as f64;
-    let height = screen_height as f64;
+    let width = SCREEN_WIDTH as f64;
+    let height = SCREEN_HEIGHT as f64;
     let (monitor_width, monitor_height) = {
         if let Some(monitor) = window.current_monitor() {
             let size = monitor.size().to_logical(hidpi_factor);

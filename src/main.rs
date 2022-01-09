@@ -5,6 +5,19 @@
 use std::io;
 use pixels::Error;
 mod projects;
+pub mod auxiliary;
+
+fn select_number_lt(maximum: u32) -> u32 {
+    loop {
+        let mut text = String::new();
+        io::stdin().read_line(&mut text).expect("Failed to read line");
+        let n = text.trim().parse().unwrap();
+        if n >= maximum {
+            continue
+        }
+        return n
+    }
+}
 
 
 fn select_animation(input: &str) -> Result<(),Error> {
@@ -23,30 +36,15 @@ fn select_animation(input: &str) -> Result<(),Error> {
         },
         "4" => {
             println!("These 'Binary Totalistic Automata' count the number of live cells in a nine cell neighborhood to determine the next state.");
-            loop {
-                println!("Please specify rule code less than 512");
-                let mut text = String::new();
-                io::stdin().read_line(&mut text).expect("Failed to read line");
-                let n = text.trim().parse().unwrap();
-                if n >= 512 {
-                    continue
-                }
-                projects::totalistic::run_totalistic(n)?
-            }
+            println!("Please specify rule code less than 512");
+            let code = select_number_lt(512);
+            projects::totalistic::run_totalistic(code)
         },
         "5" => {
             println!("These 'Binary Outer Totalistic Automata' count the number of live cells in a nine cell neighborhood to determine the next state. However the rule is different depending on whether the center cell is active.");
-            loop {
-                println!("Please specify rule code less than 262144");
-                let mut text = String::new();
-                io::stdin().read_line(&mut text).expect("Failed to read line");
-                let n = text.trim().parse().unwrap();
-                if n >= 262144 {
-                    continue
-                }
-                projects::outer_totalistic::run_outer_totalistic(n)?
-            }
-
+            println!("Please specify rule code less than 262144");
+            let code = select_number_lt(262144);
+            projects::outer_totalistic::run_outer_totalistic(code)
         },
         "6" => {
             println!("Critters is a reversible automata. This implementation preserves the number of living cells at every drawn frame, though not during calculation.");
@@ -85,7 +83,9 @@ fn main() -> Result<(),Error> {
         }
         println!("\n\nControls for animation:\nC: clear screen\nP: pause\nR: randomize screen\nSPACE: frame by frame\nESC: close screen");
         match select_animation(v) {
-            Ok(_) => continue,
+            Ok(_) => {
+                println!("finished animating");
+            }
             Err(e) => println!("{}",e),
         }
     }

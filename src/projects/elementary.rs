@@ -8,10 +8,9 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 
-use super::{create_window,generate_seed};
+use crate::auxiliary::randomizer::generate_seed;
+use crate::auxiliary::window::{create_window, SCREEN_WIDTH, SCREEN_HEIGHT};
 
-const SCREEN_WIDTH: u32 = 720;
-const SCREEN_HEIGHT: u32 = 480;
 
 pub fn run_elementary() -> Result<(), Error> {
     env_logger::init();
@@ -19,8 +18,6 @@ pub fn run_elementary() -> Result<(), Error> {
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
         create_window(
-            SCREEN_WIDTH, 
-            SCREEN_HEIGHT, 
             "Rule 110", 
             &event_loop);
     
@@ -181,7 +178,7 @@ impl Cell {
         self.alive = true
     }
 
-    fn set_dead(&mut self) {
+    fn _set_dead(&mut self) {
         self.alive = false
     }
 
@@ -233,7 +230,7 @@ impl Rule110 {
         } else {
             (x - 1, x + 1)
         };
-        let (ym1, yp1) = if y == 0 {
+        let (ym1, _) = if y == 0 {
             (self.height - 1, y + 1)
         } else if y == self.height - 1 {
             (y - 1, 0)
@@ -295,7 +292,7 @@ impl Rule110 {
         }
     }
 
-    fn set_line(&mut self, x0: isize, y0: isize, x1: isize, y1: isize, alive: bool) {
+    fn set_line(&mut self, x0: isize, y0: isize, x1: isize, y1: isize, _alive: bool) {
         // probably should do sutherland-hodgeman if this were more serious.
         // instead just clamp the start pos, and draw until moving towards the
         // end pos takes us out of bounds.

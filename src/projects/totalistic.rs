@@ -9,20 +9,18 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 
-use super::{create_window,generate_seed};
-
-const SCREEN_WIDTH: u32 = 360;
-const SCREEN_HEIGHT: u32 = 240;
+use crate::auxiliary::randomizer::generate_seed;
+use crate::auxiliary::window::{create_window, SCREEN_WIDTH, SCREEN_HEIGHT};
 
 // Nine-square binary totalistic rule using Wolfram's method
 // for n < 512
-fn code_to_rule(mut n: u32) -> [bool;9] {
+fn code_to_rule_512(mut n: u32) -> [bool;9] {
     let mut arr = [false;9];
     for p in 0..9 {
         let b = n%2;
         n = n/2;
         if b == 1 {
-            arr[9-p] = true
+            arr[8-p] = true
         }
     }
     arr
@@ -34,14 +32,12 @@ pub fn run_totalistic(n: u32) -> Result<(), Error> {
     let mut input = WinitInputHelper::new();
     let (window, p_width, p_height, mut _hidpi_factor) =
         create_window(
-            SCREEN_WIDTH, 
-            SCREEN_HEIGHT, 
             "Totalistic Automata", 
             &event_loop);
     
     let surface_texture = SurfaceTexture::new(p_width, p_height, &window);
 
-    let birth_rule = code_to_rule(n);
+    let birth_rule = code_to_rule_512(n);
     println!("Rule {} parsed as: {:?}",n,birth_rule);
     let mut life = Grid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize, birth_rule);
     let mut pixels = Pixels::new(SCREEN_WIDTH, SCREEN_HEIGHT, surface_texture)?;
@@ -59,7 +55,6 @@ pub fn run_totalistic(n: u32) -> Result<(), Error> {
                 .is_err()
             {
                 *control_flow = ControlFlow::Exit;
-                return;
             }
         }
 
@@ -69,7 +64,6 @@ pub fn run_totalistic(n: u32) -> Result<(), Error> {
             // Close events
             if input.key_pressed(VirtualKeyCode::Escape) || input.quit() {
                 *control_flow = ControlFlow::Exit;
-                return;
             }
             if input.key_pressed(VirtualKeyCode::P) {
                 paused = !paused;
