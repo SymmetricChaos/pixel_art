@@ -47,11 +47,6 @@ fn select_animation(input: &str) -> Result<(),Error> {
             projects::outer_totalistic::run_outer_totalistic(code)
         },
         "6" => {
-            println!("Critters is a reversible automata. This implementation preserves the number of living cells at every drawn frame, though not during calculation.");
-            println!("Press V to reverse. (WORK IN PROGRESS)");
-            projects::critters::run_critters()
-        },
-        "7" => {
             println!("This automata rotates each block 90 degree if and only if it contains exactly one live cell.");
             println!("Press V to reverse.");
             projects::single_rotation::run_rotor()

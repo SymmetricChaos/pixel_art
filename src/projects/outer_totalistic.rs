@@ -22,7 +22,6 @@ fn code_to_rule(mut n: u32) -> ([bool;9],[bool;9]) {
     for p in 0..18 {
         let b = n%2;
         n = n/2;
-
         if b == 1 {
             if p % 2 == 0{
                 live[p/2] = true
@@ -47,7 +46,7 @@ pub fn run_outer_totalistic(n: u32) -> Result<(), Error> {
 
     let (live_rule,dead_rule) = code_to_rule(n);
     println!("Rule {} parsed as:\n{:?}\n{:?}",n,live_rule,dead_rule);
-    let mut life = ConwayGrid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize, live_rule, dead_rule);
+    let mut life = Grid::new_empty(SCREEN_WIDTH as usize, SCREEN_HEIGHT as usize, live_rule, dead_rule);
     let mut pixels = Pixels::new(SCREEN_WIDTH, SCREEN_HEIGHT, surface_texture)?;
     let mut paused = false;
 
@@ -192,7 +191,7 @@ impl Cell {
 }
 
 #[derive(Clone, Debug)]
-struct ConwayGrid {
+struct Grid {
     cells: Vec<Cell>,
     width: usize,
     height: usize,
@@ -201,7 +200,7 @@ struct ConwayGrid {
     dead: [bool;9],
 }
 
-impl ConwayGrid {
+impl Grid {
     fn new_empty(width: usize, height: usize, live: [bool;9], dead: [bool;9]) -> Self {
         assert!(width != 0 && height != 0);
         let size = width.checked_mul(height).expect("too big");
